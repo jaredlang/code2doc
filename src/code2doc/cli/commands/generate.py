@@ -186,13 +186,21 @@ def run_generate(
                                         task,
                                         description=f"[green]✓[/green] Completed: {topic}",
                                     )
-                                completed = new_completed
+                                completed = completed | new_completed  # Accumulate, don't replace
 
-                                # Store final results
+                                # Store final results (merge, don't replace)
                                 if "generated_docs" in node_state:
-                                    results["generated_docs"] = node_state["generated_docs"]
+                                    existing_docs = results.get("generated_docs", {})
+                                    results["generated_docs"] = {
+                                        **existing_docs,
+                                        **node_state["generated_docs"],
+                                    }
                                 if "errors" in node_state:
-                                    results["errors"] = node_state.get("errors", [])
+                                    existing_errors = results.get("errors", [])
+                                    new_errors = node_state.get("errors", [])
+                                    results["errors"] = existing_errors + [
+                                        e for e in new_errors if e not in existing_errors
+                                    ]
 
                 results["completed_topics"] = list(completed)
 

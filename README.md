@@ -113,6 +113,66 @@ code2doc config init
 code2doc status
 ```
 
+## Agent Setup
+
+Before using Code-2-Doc, you need to create the AWS Bedrock agents. This is a one-time setup process.
+
+### Prerequisites for Agent Setup
+
+1. **IAM Role**: Create an IAM role for Bedrock agents with the following trust policy:
+   ```json
+   {
+     "Version": "2012-10-17",
+     "Statement": [
+       {
+         "Effect": "Allow",
+         "Principal": {"Service": "bedrock.amazonaws.com"},
+         "Action": "sts:AssumeRole"
+       }
+     ]
+   }
+   ```
+
+2. **Environment Variable**: Set the role ARN in your `.env` file:
+   ```bash
+   BEDROCK_AGENT_ROLE_ARN=arn:aws:iam::123456789012:role/BedrockAgentRole-Code2Doc
+   ```
+
+### Create Agents
+
+Use the setup script to create all required agents:
+
+```bash
+# Validate prerequisites first
+python scripts/setup_agents.py validate
+
+# Create all agents (supervisor + 7 sub-agents)
+python scripts/setup_agents.py create-all
+
+# Or create a single agent for testing
+python scripts/setup_agents.py create-agent --name overview
+```
+
+### Agent Management Commands
+
+```bash
+# List all Code-2-Doc agents
+python scripts/setup_agents.py list-agents
+
+# Show current configuration
+python scripts/setup_agents.py show-config
+
+# Delete all agents (use with caution)
+python scripts/setup_agents.py delete-all --confirm
+```
+
+After creating agents, the script will output the agent IDs to add to your `.env` file:
+
+```bash
+BEDROCK_SUPERVISOR_AGENT_ID=XXXXXXXXXX
+BEDROCK_SUPERVISOR_AGENT_ALIAS_ID=XXXXXXXXXX
+```
+
 ## Project Structure
 
 ```
@@ -124,9 +184,10 @@ code-2-doc/
 │   ├── config/            # Configuration management
 │   └── utils/             # Utilities and helpers
 ├── prompts/               # Agent instruction prompts
+├── scripts/               # Setup and utility scripts
 ├── tests/                 # Test suite
-├── docs/                  # Documentation
-└── scripts/               # Setup and utility scripts
+├── plans/                 # Architecture and implementation plans
+└── docs/                  # Documentation
 ```
 
 ## Development

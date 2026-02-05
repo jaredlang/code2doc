@@ -48,15 +48,18 @@ def create_overview_node(llm: BaseChatModel) -> Callable[[AgentState], dict[str,
         """
         request = state["request"]
         repo_url = request["repo_url"]
+        branch = request["branch"]
         confluence_space = request["confluence_space"]
         parent_page_id = request.get("parent_page_id")
 
-        logger.info(f"Overview agent: Processing {repo_url}")
+        logger.info(f"Overview agent: Processing {repo_url} (branch: {branch})")
 
         # Create task message for the agent
         task = HumanMessage(
             content=f"""
 Generate an overview document for the repository at {repo_url}.
+
+IMPORTANT: Use branch '{branch}' for all GitLab operations (list_repository_files, get_file_content, etc.).
 
 Your task:
 1. Explore the repository structure to understand the project

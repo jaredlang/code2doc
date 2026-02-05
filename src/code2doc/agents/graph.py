@@ -184,6 +184,7 @@ def run_documentation_generation(
     topics: list[str],
     confluence_space: str,
     parent_page_id: str | None = None,
+    branch: str = "main",
     stream: bool = False,
 ) -> dict[str, Any] | Generator[dict[str, Any], None, None]:
     """
@@ -194,6 +195,7 @@ def run_documentation_generation(
         topics: List of documentation topics to generate
         confluence_space: Confluence space key for publishing
         parent_page_id: Optional parent page ID
+        branch: Git branch to analyze (default: main)
         stream: Whether to stream results (yields intermediate states)
 
     Returns:
@@ -201,6 +203,7 @@ def run_documentation_generation(
     """
     logger.info(f"Starting documentation generation for {repo_url}")
     logger.info(f"Topics: {topics}")
+    logger.info(f"Branch: {branch}")
 
     # Get the graph
     graph = get_documentation_graph()
@@ -211,6 +214,7 @@ def run_documentation_generation(
         topics=topics,
         confluence_space=confluence_space,
         parent_page_id=parent_page_id,
+        branch=branch,
     )
 
     if stream:

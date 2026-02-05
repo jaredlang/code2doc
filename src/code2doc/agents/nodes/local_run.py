@@ -48,15 +48,18 @@ def create_local_run_node(llm: BaseChatModel) -> Callable[[AgentState], dict[str
         """
         request = state["request"]
         repo_url = request["repo_url"]
+        branch = request["branch"]
         confluence_space = request["confluence_space"]
         parent_page_id = request.get("parent_page_id")
 
-        logger.info(f"Local run agent: Processing {repo_url}")
+        logger.info(f"Local run agent: Processing {repo_url} (branch: {branch})")
 
         # Create task message for the agent
         task = HumanMessage(
             content=f"""
 Generate a local development setup guide for the repository at {repo_url}.
+
+IMPORTANT: Use branch '{branch}' for all GitLab operations (list_repository_files, get_file_content, etc.).
 
 Your task:
 1. Identify setup requirements:

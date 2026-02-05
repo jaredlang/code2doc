@@ -16,6 +16,9 @@ class DocumentationRequest(TypedDict):
     repo_url: str
     """GitLab repository URL to document."""
 
+    branch: str
+    """Git branch to analyze (default: main)."""
+
     topics: list[str]
     """List of documentation topics to generate."""
 
@@ -88,6 +91,7 @@ def create_initial_state(
     topics: list[str],
     confluence_space: str,
     parent_page_id: str | None = None,
+    branch: str = "main",
 ) -> AgentState:
     """
     Create the initial state for a documentation generation run.
@@ -97,6 +101,7 @@ def create_initial_state(
         topics: List of topics to generate
         confluence_space: Confluence space key
         parent_page_id: Optional parent page ID
+        branch: Git branch to analyze (default: main)
 
     Returns:
         Initial AgentState for the graph
@@ -104,6 +109,7 @@ def create_initial_state(
     return AgentState(
         request=DocumentationRequest(
             repo_url=repo_url,
+            branch=branch,
             topics=topics,
             confluence_space=confluence_space,
             parent_page_id=parent_page_id,

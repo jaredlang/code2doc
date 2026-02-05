@@ -87,8 +87,16 @@ def get_page_by_title(
         page = client.get_page_by_title(title=title, space_key=space_key)
 
         if page is None:
-            logger.warning(f"Page not found: {title} - it will be created if using find_or_create_page")
-            return json.dumps({"status": "not_found", "title": title, "message": f"Page '{title}' does not exist yet"})
+            logger.warning(
+                f"Page not found: {title} - it will be created if using find_or_create_page"
+            )
+            return json.dumps(
+                {
+                    "status": "not_found",
+                    "title": title,
+                    "message": f"Page '{title}' does not exist yet",
+                }
+            )
 
         result = {
             "status": "found",

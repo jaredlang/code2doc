@@ -69,6 +69,7 @@ def run_generate(
     dry_run: bool = False,
     gitlab_url: str | None = None,
     confluence_space: str | None = None,
+    branch: str = "main",
     stream: bool = True,
 ) -> None:
     """
@@ -80,6 +81,7 @@ def run_generate(
         dry_run: Preview without publishing
         gitlab_url: GitLab repository URL (required)
         confluence_space: Override Confluence space
+        branch: Git branch to analyze (default: main)
         stream: Stream progress updates
     """
     settings = get_settings()
@@ -126,6 +128,7 @@ def run_generate(
         Panel.fit(
             f"[bold]Documentation Generation (LangGraph)[/bold]\n\n"
             f"GitLab: {repo_url}\n"
+            f"Branch: {branch}\n"
             f"Confluence: {settings.confluence.url} ({space_key})\n"
             f"Topics: {', '.join(selected_topics)}\n"
             f"Mode: {'[yellow]Dry Run[/yellow]' if dry_run else '[green]Live[/green]'}",
@@ -169,6 +172,7 @@ def run_generate(
                     topics=selected_topics,
                     confluence_space=space_key,
                     parent_page_id=parent_page_id,
+                    branch=branch,
                     stream=True,
                 ):
                     # Update progress based on completed topics
@@ -200,6 +204,7 @@ def run_generate(
                     topics=selected_topics,
                     confluence_space=space_key,
                     parent_page_id=parent_page_id,
+                    branch=branch,
                     stream=False,
                 )
                 # In batch mode, we always get a dict back
@@ -330,6 +335,12 @@ def generate_run(
         "-s",
         help="Confluence space key (overrides config)",
     ),
+    branch: str = typer.Option(
+        "main",
+        "--branch",
+        "-b",
+        help="Git branch to analyze (default: main)",
+    ),
     no_stream: bool = typer.Option(
         False,
         "--no-stream",
@@ -350,6 +361,7 @@ def generate_run(
         code2doc generate run -g https://gitlab.com/org/repo -t overview,erd
         code2doc generate run -g https://gitlab.com/org/repo --all
         code2doc generate run -g https://gitlab.com/org/repo -t api --dry-run
+        code2doc generate run -g https://gitlab.com/org/repo -t overview -b master
     """
     run_generate(
         topics=topics,
@@ -357,6 +369,7 @@ def generate_run(
         dry_run=dry_run,
         gitlab_url=gitlab_url,
         confluence_space=confluence_space,
+        branch=branch,
         stream=not no_stream,
     )
 

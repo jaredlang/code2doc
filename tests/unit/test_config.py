@@ -21,7 +21,7 @@ def no_dotenv(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 class TestSettings:
     """Tests for Settings class."""
 
-    def test_default_settings(self, no_dotenv: Path) -> None:
+    def test_default_settings(self, no_dotenv: Path) -> None:  # noqa: ARG002
         """Test that default settings are created correctly."""
         with patch.dict(os.environ, {}, clear=True):
             settings = Settings()
@@ -30,7 +30,7 @@ class TestSettings:
             assert settings.aws.bedrock_model_id == "us.anthropic.claude-opus-4-5-20251101-v1:0"
             assert settings.gitlab.url == "https://gitlab.com"
 
-    def test_settings_from_env(self, no_dotenv: Path) -> None:
+    def test_settings_from_env(self, no_dotenv: Path) -> None:  # noqa: ARG002
         """Test that settings are loaded from environment variables."""
         env_vars = {
             "AWS_REGION": "eu-west-1",
@@ -53,7 +53,7 @@ class TestSettings:
             assert settings.confluence.url == "https://example.atlassian.net/wiki"
             assert settings.confluence.space_key == "TEST"
 
-    def test_is_configured(self, no_dotenv: Path) -> None:
+    def test_is_configured(self, no_dotenv: Path) -> None:  # noqa: ARG002
         """Test is_configured property."""
         env_vars = {
             "GITLAB_ACCESS_TOKEN": "token",

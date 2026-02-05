@@ -1,0 +1,132 @@
+"""
+Event schema documentation agent node.
+
+Generates event/message schema documentation including:
+- Event definitions and types
+- Message queue schemas
+- Event flow diagrams
+- Publisher/subscriber relationships
+"""
+
+from collections.abc import Callable
+from typing import Any
+
+from langchain_core.language_models import BaseChatModel
+from langchain_core.messages import HumanMessage
+
+from code2doc.agents.nodes.base import create_documentation_agent
+from code2doc.agents.state import AgentState
+from code2doc.utils.logging import get_logger
+
+logger = get_logger("agents.nodes.event_schema")
+
+
+def create_event_schema_node(llm: BaseChatModel) -> Callable[[AgentState], dict[str, Any]]:
+    """
+    Create the event schema documentation agent node.
+
+    The event schema agent analyzes event definitions, message queues,
+    and pub/sub patterns to generate event documentation.
+
+    Args:
+        llm: Language model to use
+
+    Returns:
+        Event schema agent node function
+    """
+    agent = create_documentation_agent(llm, "event-schema")
+
+    def event_schema_agent(state: AgentState) -> dict:
+        """
+        Generate event schema documentation for the repository.
+
+        Args:
+            state: Current graph state
+
+        Returns:
+            State updates with completed topic and any errors
+        """
+        request = state["request"]
+        repo_url = request["repo_url"]
+        confluence_space = request["confluence_space"]
+        parent_page_id = request.get("parent_page_id")
+
+        logger.info(f"Event schema agent: Processing {repo_url}")
+
+        # Create task message for the agent
+        task = HumanMessage(
+            content=f"""
+Generate event schema documentation for the repository at {repo_url}.
+
+Your task:
+1. Search for event-related files:
+   - Event definitions (events/, messages/, schemas/)
+   - Message queue configurations (SQS, RabbitMQ, Kafka)
+   - Event handlers and listeners
+   - Pub/sub implementations
+
+2. Document each event type:
+   - Event name and purpose
+   - Payload schema with field descriptions
+   - Required vs optional fields
+   - Example payloads
+
+3. Map event flows:
+   - Publishers (who emits the event)
+   - Subscribers (who handles the event)
+   - Event routing and filtering
+   - Retry and dead-letter handling
+
+4. Create visualizations:
+   - Event flow diagram (Mermaid)
+   - Publisher/subscriber matrix
+   - Event lifecycle states
+
+5. Publish to Confluence space '{confluence_space}'
+   - Use title format: [Project Name] - Event Schemas
+   - Parent page ID: {parent_page_id or "None (create at root level)"}
+
+Include JSON schema examples for each event type.
+"""
+        )
+
+        try:
+            # Run the agent
+            result = agent.invoke({"messages": [task]})
+
+            # Extract any page ID from the result messages
+            page_id = _extract_page_id(result.get("messages", []))
+
+            logger.info("Event schema agent: Completed successfully")
+
+            return {
+                "completed_topics": state.get("completed_topics", []) + ["event-schema"],
+                "messages": result.get("messages", []),
+                "generated_docs": {
+                    **state.get("generated_docs", {}),
+                    "event-schema": page_id or "generated",
+                },
+            }
+
+        except Exception as e:
+            logger.error(f"Event schema agent failed: {e}")
+            return {
+                "completed_topics": state.get("completed_topics", []) + ["event-schema"],
+                "errors": state.get("errors", [])
+                + [f"Event schema documentation failed: {str(e)}"],
+            }
+
+    return event_schema_agent
+
+
+def _extract_page_id(messages: list) -> str | None:
+    """Extract Confluence page ID from agent messages if available."""
+    for msg in reversed(messages):
+        content = str(msg.content) if hasattr(msg, "content") else str(msg)
+        if "page_id" in content:
+            import re
+
+            match = re.search(r'"page_id":\s*"?(\d+)"?', content)
+            if match:
+                return match.group(1)
+    return None

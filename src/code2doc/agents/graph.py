@@ -1,0 +1,237 @@
+"""
+Main LangGraph workflow for documentation generation.
+
+This module assembles the complete documentation generation graph
+by connecting the supervisor and agent nodes.
+"""
+
+import os
+from collections.abc import Generator
+from typing import Any, cast
+
+from langchain_core.language_models import BaseChatModel
+from langgraph.graph import END, START, StateGraph
+
+from code2doc.agents.nodes.api import create_api_node
+from code2doc.agents.nodes.dependencies import create_dependencies_node
+from code2doc.agents.nodes.design import create_design_node
+from code2doc.agents.nodes.erd import create_erd_node
+from code2doc.agents.nodes.event_schema import create_event_schema_node
+from code2doc.agents.nodes.local_run import create_local_run_node
+from code2doc.agents.nodes.overview import create_overview_node
+from code2doc.agents.nodes.supervisor import create_supervisor_node, route_to_agent
+from code2doc.agents.state import AgentState, create_initial_state
+from code2doc.config.settings import get_settings
+from code2doc.utils.logging import get_logger
+
+logger = get_logger("agents.graph")
+
+# Singleton graph instance
+_graph: Any = None
+
+
+def get_llm() -> BaseChatModel:
+    """
+    Get the configured LLM instance.
+
+    Supports both AWS Bedrock and direct Anthropic API based on configuration.
+
+    Returns:
+        Configured LLM instance
+    """
+    settings = get_settings()
+    llm_provider = os.getenv("LLM_PROVIDER", "bedrock").lower()
+
+    if llm_provider == "anthropic":
+        # Direct Anthropic API
+        try:
+            from langchain_anthropic import ChatAnthropic  # type: ignore[import-not-found]
+
+            api_key = os.getenv("ANTHROPIC_API_KEY")
+            if not api_key:
+                raise ValueError("ANTHROPIC_API_KEY not set")
+
+            logger.info("Using Anthropic API for LLM")
+            return cast(
+                BaseChatModel,
+                ChatAnthropic(
+                    model="claude-sonnet-4-20250514",
+                    api_key=api_key,
+                ),
+            )
+        except ImportError as e:
+            raise ImportError(
+                "langchain-anthropic not installed. Install with: pip install langchain-anthropic"
+            ) from e
+    else:
+        # AWS Bedrock (default)
+        try:
+            from langchain_aws import ChatBedrock
+
+            logger.info(f"Using AWS Bedrock for LLM (model: {settings.aws.bedrock_model_id})")
+            return ChatBedrock(
+                model=settings.aws.bedrock_model_id,
+                region=settings.aws.aws_region,
+            )
+        except ImportError as e:
+            raise ImportError(
+                "langchain-aws not installed. Install with: pip install langchain-aws"
+            ) from e
+
+
+def create_documentation_graph() -> Any:
+    """
+    Create the main documentation generation graph.
+
+    The graph structure:
+    1. START -> supervisor (routes to appropriate agent)
+    2. supervisor -> agent_node (based on current topic)
+    3. agent_node -> supervisor (for next topic)
+    4. supervisor -> END (when all topics complete)
+
+    Returns:
+        Compiled StateGraph ready for execution
+    """
+    logger.info("Creating documentation generation graph")
+
+    # Get LLM
+    llm = get_llm()
+
+    # Create nodes
+    supervisor = create_supervisor_node(llm)
+    overview_agent = create_overview_node(llm)
+    erd_agent = create_erd_node(llm)
+    api_agent = create_api_node(llm)
+    design_agent = create_design_node(llm)
+    event_schema_agent = create_event_schema_node(llm)
+    local_run_agent = create_local_run_node(llm)
+    dependencies_agent = create_dependencies_node(llm)
+
+    # Build graph
+    builder: StateGraph[AgentState] = StateGraph(AgentState)
+
+    # Add nodes - type ignore needed due to LangGraph's complex type system
+    builder.add_node("supervisor", supervisor)  # type: ignore[call-overload]
+    builder.add_node("overview_agent", overview_agent)  # type: ignore[call-overload]
+    builder.add_node("erd_agent", erd_agent)  # type: ignore[call-overload]
+    builder.add_node("api_agent", api_agent)  # type: ignore[call-overload]
+    builder.add_node("design_agent", design_agent)  # type: ignore[call-overload]
+    builder.add_node("event_schema_agent", event_schema_agent)  # type: ignore[call-overload]
+    builder.add_node("local_run_agent", local_run_agent)  # type: ignore[call-overload]
+    builder.add_node("dependencies_agent", dependencies_agent)  # type: ignore[call-overload]
+
+    # Add edges
+    # Start with supervisor
+    builder.add_edge(START, "supervisor")
+
+    # Conditional routing from supervisor to agents
+    builder.add_conditional_edges(
+        "supervisor",
+        route_to_agent,
+        {
+            "overview_agent": "overview_agent",
+            "erd_agent": "erd_agent",
+            "api_agent": "api_agent",
+            "design_agent": "design_agent",
+            "event_schema_agent": "event_schema_agent",
+            "local_run_agent": "local_run_agent",
+            "dependencies_agent": "dependencies_agent",
+            "complete": END,
+        },
+    )
+
+    # All agents return to supervisor for next topic
+    agent_nodes = [
+        "overview_agent",
+        "erd_agent",
+        "api_agent",
+        "design_agent",
+        "event_schema_agent",
+        "local_run_agent",
+        "dependencies_agent",
+    ]
+    for agent_node in agent_nodes:
+        builder.add_edge(agent_node, "supervisor")
+
+    # Compile the graph
+    graph = builder.compile()
+
+    logger.info("Documentation graph created successfully")
+    return graph
+
+
+def get_documentation_graph() -> Any:
+    """
+    Get or create the documentation graph singleton.
+
+    Returns:
+        Compiled documentation graph
+    """
+    global _graph
+    if _graph is None:
+        _graph = create_documentation_graph()
+    return _graph
+
+
+def reset_graph() -> None:
+    """Reset the graph singleton (useful for testing)."""
+    global _graph
+    _graph = None
+
+
+def run_documentation_generation(
+    repo_url: str,
+    topics: list[str],
+    confluence_space: str,
+    parent_page_id: str | None = None,
+    stream: bool = False,
+) -> dict[str, Any] | Generator[dict[str, Any], None, None]:
+    """
+    Run the documentation generation workflow.
+
+    Args:
+        repo_url: GitLab repository URL to document
+        topics: List of documentation topics to generate
+        confluence_space: Confluence space key for publishing
+        parent_page_id: Optional parent page ID
+        stream: Whether to stream results (yields intermediate states)
+
+    Returns:
+        Final state with generated documentation info, or generator if streaming
+    """
+    logger.info(f"Starting documentation generation for {repo_url}")
+    logger.info(f"Topics: {topics}")
+
+    # Get the graph
+    graph = get_documentation_graph()
+
+    # Create initial state
+    initial_state = create_initial_state(
+        repo_url=repo_url,
+        topics=topics,
+        confluence_space=confluence_space,
+        parent_page_id=parent_page_id,
+    )
+
+    if stream:
+        # Stream mode - return generator that yields each state update
+        def _stream_generator() -> Generator[dict[str, Any], None, None]:
+            yield from graph.stream(initial_state, stream_mode="updates")
+
+        return _stream_generator()
+    else:
+        # Batch mode - returns final state
+        final_state: dict[str, Any] = graph.invoke(initial_state)
+        return final_state
+
+
+def visualize_graph() -> str:
+    """
+    Generate a Mermaid diagram of the documentation graph.
+
+    Returns:
+        Mermaid diagram string
+    """
+    graph = get_documentation_graph()
+    mermaid: str = graph.get_graph().draw_mermaid()
+    return mermaid

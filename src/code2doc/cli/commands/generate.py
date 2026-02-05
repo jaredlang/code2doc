@@ -1,7 +1,7 @@
 """
 Generate command for Code-2-Doc CLI.
 
-Handles documentation generation using Bedrock agents.
+Handles documentation generation using LangGraph agents.
 """
 
 from typing import Any
@@ -69,9 +69,10 @@ def run_generate(
     dry_run: bool = False,
     gitlab_url: str | None = None,
     confluence_space: str | None = None,
+    stream: bool = True,
 ) -> None:
     """
-    Run documentation generation.
+    Run documentation generation using LangGraph.
 
     Args:
         topics: Comma-separated list of topics
@@ -79,6 +80,7 @@ def run_generate(
         dry_run: Preview without publishing
         gitlab_url: Override GitLab URL
         confluence_space: Override Confluence space
+        stream: Stream progress updates
     """
     settings = get_settings()
 
@@ -100,30 +102,111 @@ def run_generate(
         console.print("[red]Error: No valid topics specified[/red]")
         raise typer.Exit(1)
 
+    # Get repository URL
+    repo_url = gitlab_url or settings.gitlab.url
+    space_key = confluence_space or settings.confluence.space_key
+    parent_page_id = settings.confluence.parent_page_id
+
     # Display configuration
     console.print(
         Panel.fit(
-            f"[bold]Documentation Generation[/bold]\n\n"
-            f"GitLab: {gitlab_url or settings.gitlab.url}\n"
-            f"Confluence: {settings.confluence.url} ({confluence_space or settings.confluence.space_key})\n"
+            f"[bold]Documentation Generation (LangGraph)[/bold]\n\n"
+            f"GitLab: {repo_url}\n"
+            f"Confluence: {settings.confluence.url} ({space_key})\n"
             f"Topics: {', '.join(selected_topics)}\n"
             f"Mode: {'[yellow]Dry Run[/yellow]' if dry_run else '[green]Live[/green]'}",
             title="Configuration",
         )
     )
 
-    # Check if agents are configured
-    if not settings.aws.bedrock_supervisor_agent_id:
-        console.print("\n[yellow]Warning: Bedrock agents not configured[/yellow]")
-        console.print("Run 'python scripts/setup_agents.py' to create agents")
-        console.print("Or set BEDROCK_SUPERVISOR_AGENT_ID in your .env file\n")
+    if dry_run:
+        # Dry run mode - simulate generation
+        console.print("\n[yellow]Dry run mode - no actual generation will occur[/yellow]\n")
+        _run_dry_run(selected_topics)
+        return
 
-        if not dry_run:
-            console.print("[red]Cannot proceed without agent configuration[/red]")
-            raise typer.Exit(1)
+    # Import graph module (lazy import to avoid startup cost)
+    try:
+        from code2doc.agents.graph import run_documentation_generation
+    except ImportError as e:
+        console.print(f"[red]Error: Failed to import LangGraph components: {e}[/red]")
+        console.print("Make sure LangGraph dependencies are installed:")
+        console.print("  pip install langgraph langchain langchain-aws")
+        raise typer.Exit(1) from e
 
     # Generate documentation
     console.print("\n[bold]Generating documentation...[/bold]\n")
+
+    results: dict[str, Any] = {}
+
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        console=console,
+    ) as progress:
+        task = progress.add_task("Initializing...", total=None)
+
+        try:
+            if stream:
+                # Stream mode - show progress for each topic
+                completed: set[str] = set()
+                for event in run_documentation_generation(
+                    repo_url=repo_url,
+                    topics=selected_topics,
+                    confluence_space=space_key,
+                    parent_page_id=parent_page_id,
+                    stream=True,
+                ):
+                    # Update progress based on completed topics
+                    if isinstance(event, dict):
+                        for _node_name, node_state in event.items():
+                            if isinstance(node_state, dict):
+                                new_completed = set(node_state.get("completed_topics", []))
+                                newly_done = new_completed - completed
+                                for topic in newly_done:
+                                    progress.update(
+                                        task,
+                                        description=f"[green]✓[/green] Completed: {topic}",
+                                    )
+                                completed = new_completed
+
+                                # Store final results
+                                if "generated_docs" in node_state:
+                                    results["generated_docs"] = node_state["generated_docs"]
+                                if "errors" in node_state:
+                                    results["errors"] = node_state.get("errors", [])
+
+                results["completed_topics"] = list(completed)
+
+            else:
+                # Batch mode - wait for completion
+                progress.update(task, description="Processing all topics...")
+                batch_result = run_documentation_generation(
+                    repo_url=repo_url,
+                    topics=selected_topics,
+                    confluence_space=space_key,
+                    parent_page_id=parent_page_id,
+                    stream=False,
+                )
+                # In batch mode, we always get a dict back
+                if isinstance(batch_result, dict):
+                    results = batch_result
+
+            progress.update(task, description="[green]✓[/green] Generation complete")
+
+        except Exception as e:
+            logger.exception("Documentation generation failed")
+            progress.update(task, description=f"[red]✗[/red] Failed: {str(e)[:50]}")
+            console.print(f"\n[red]Error: {e}[/red]")
+            raise typer.Exit(1) from e
+
+    # Display results
+    _display_results(results, selected_topics)
+
+
+def _run_dry_run(topics: list[str]) -> None:
+    """Run a simulated dry run for the given topics."""
+    import time
 
     results = []
 
@@ -132,47 +215,20 @@ def run_generate(
         TextColumn("[progress.description]{task.description}"),
         console=console,
     ) as progress:
-        for topic in selected_topics:
-            task = progress.add_task(f"Generating {topic}...", total=None)
-
-            try:
-                if dry_run:
-                    # Simulate generation
-                    import time
-
-                    time.sleep(0.5)
-                    results.append(
-                        {
-                            "topic": topic,
-                            "status": "success",
-                            "message": "Dry run - would generate documentation",
-                        }
-                    )
-                else:
-                    # Actual generation using Bedrock agent
-                    result = generate_topic(
-                        topic=topic,
-                        gitlab_url=gitlab_url or settings.gitlab.url,
-                        confluence_space=confluence_space or settings.confluence.space_key,
-                        settings=settings,
-                    )
-                    results.append(result)
-
-                progress.update(task, description=f"[green]✓[/green] {topic}")
-
-            except Exception as e:
-                logger.exception(f"Failed to generate {topic}")
-                results.append(
-                    {
-                        "topic": topic,
-                        "status": "error",
-                        "message": str(e),
-                    }
-                )
-                progress.update(task, description=f"[red]✗[/red] {topic}")
+        for topic in topics:
+            task = progress.add_task(f"Simulating {topic}...", total=None)
+            time.sleep(0.3)  # Simulate processing
+            results.append(
+                {
+                    "topic": topic,
+                    "status": "success",
+                    "message": "Dry run - would generate documentation",
+                }
+            )
+            progress.update(task, description=f"[green]✓[/green] {topic}")
 
     # Display results
-    console.print("\n[bold]Results:[/bold]\n")
+    console.print("\n[bold]Dry Run Results:[/bold]\n")
 
     table = Table(show_header=True, header_style="bold")
     table.add_column("Topic")
@@ -180,74 +236,52 @@ def run_generate(
     table.add_column("Details")
 
     for result in results:
-        status_icon = "[green]✓[/green]" if result["status"] == "success" else "[red]✗[/red]"
         table.add_row(
             result["topic"],
-            status_icon,
-            result.get("message", "")[:50],
+            "[green]✓[/green]",
+            result["message"],
         )
 
     console.print(table)
+    console.print(
+        f"\n[bold]Summary:[/bold] {len(results)}/{len(results)} topics would be generated"
+    )
+
+
+def _display_results(results: dict[str, Any], requested_topics: list[str]) -> None:
+    """Display the generation results."""
+    console.print("\n[bold]Results:[/bold]\n")
+
+    completed = results.get("completed_topics", [])
+    generated_docs = results.get("generated_docs", {})
+    errors = results.get("errors", [])
+
+    table = Table(show_header=True, header_style="bold")
+    table.add_column("Topic")
+    table.add_column("Status")
+    table.add_column("Page ID")
+
+    for topic in requested_topics:
+        if topic in completed:
+            page_id = generated_docs.get(topic, "N/A")
+            table.add_row(topic, "[green]✓[/green]", str(page_id))
+        else:
+            table.add_row(topic, "[red]✗[/red]", "Failed")
+
+    console.print(table)
+
+    # Show errors if any
+    if errors:
+        console.print("\n[yellow]Errors:[/yellow]")
+        for error in errors:
+            console.print(f"  • {error}")
 
     # Summary
-    success_count = sum(1 for r in results if r["status"] == "success")
+    success_count = len(completed)
+    total_count = len(requested_topics)
     console.print(
-        f"\n[bold]Summary:[/bold] {success_count}/{len(results)} topics generated successfully"
+        f"\n[bold]Summary:[/bold] {success_count}/{total_count} topics generated successfully"
     )
-
-
-def generate_topic(
-    topic: str,
-    gitlab_url: str,
-    confluence_space: str,
-    settings: Any,
-) -> dict[str, Any]:
-    """
-    Generate documentation for a single topic using Bedrock agent.
-
-    Args:
-        topic: Topic name
-        gitlab_url: GitLab repository URL
-        confluence_space: Confluence space key
-        settings: Application settings
-
-    Returns:
-        Result dictionary with status and details
-    """
-    from code2doc.agents.tool_executor import BedrockAgentSession
-
-    # Create agent session
-    session = BedrockAgentSession(
-        agent_id=settings.aws.bedrock_supervisor_agent_id,
-        agent_alias_id=settings.aws.bedrock_supervisor_agent_alias_id,
-        region=settings.aws.aws_region,
-    )
-
-    # Construct the prompt
-    prompt = f"""
-    Generate {topic} documentation for the repository at {gitlab_url}.
-    Publish the documentation to Confluence space {confluence_space}.
-    Follow the naming convention: [Project Name] - [Document Type]
-    """
-
-    try:
-        # Invoke the agent
-        response = session.invoke(prompt)
-
-        return {
-            "topic": topic,
-            "status": "success",
-            "message": "Documentation generated and published",
-            "response": response,
-        }
-    except Exception as e:
-        return {
-            "topic": topic,
-            "status": "error",
-            "message": str(e),
-        }
-    finally:
-        session.end_session()
 
 
 @app.command("run")
@@ -282,14 +316,23 @@ def generate_run(
         "-s",
         help="Confluence space key (overrides config)",
     ),
+    no_stream: bool = typer.Option(
+        False,
+        "--no-stream",
+        help="Disable streaming progress (wait for completion)",
+    ),
 ) -> None:
     """
     Generate documentation for specified topics.
+
+    Uses LangGraph multi-agent workflow to analyze source code
+    and generate documentation in Confluence.
 
     Examples:
         code2doc generate run --topics overview,erd
         code2doc generate run --all
         code2doc generate run -t api --dry-run
+        code2doc generate run -g https://gitlab.com/org/repo -t overview
     """
     run_generate(
         topics=topics,
@@ -297,6 +340,7 @@ def generate_run(
         dry_run=dry_run,
         gitlab_url=gitlab_url,
         confluence_space=confluence_space,
+        stream=not no_stream,
     )
 
 
@@ -315,3 +359,19 @@ def list_available_topics() -> None:
     console.print("  • architecture → design")
     console.print("  • dependencies → resource-dependency")
     console.print()
+
+
+@app.command("graph")
+def show_graph() -> None:
+    """Display the LangGraph workflow diagram."""
+    try:
+        from code2doc.agents.graph import visualize_graph
+
+        console.print("\n[bold]Documentation Generation Graph (Mermaid):[/bold]\n")
+        mermaid = visualize_graph()
+        console.print(mermaid)
+        console.print("\n[dim]Copy this to a Mermaid renderer to visualize the workflow.[/dim]\n")
+
+    except ImportError as e:
+        console.print(f"[red]Error: Failed to import graph module: {e}[/red]")
+        raise typer.Exit(1) from e

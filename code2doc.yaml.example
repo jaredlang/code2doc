@@ -14,7 +14,8 @@ confluence:
   base_url: "https://example.atlassian.net/wiki"
   space_key: "DOCS"
   parent_page_id: ""  # Optional: parent page for documentation hierarchy
-  access_token_env: "CONFLUENCE_ACCESS_TOKEN"
+  username_env: "CONFLUENCE_USERNAME"      # Environment variable for username (email)
+  access_token_env: "CONFLUENCE_API_TOKEN" # Environment variable for API token
 
 # Document Naming Configuration
 naming:

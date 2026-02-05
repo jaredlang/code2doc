@@ -80,9 +80,13 @@ class ConfluenceConfig(BaseModel):
         default=None,
         description="Parent page ID for documentation hierarchy",
     )
+    username_env: str = Field(
+        default="CONFLUENCE_USERNAME",
+        description="Environment variable name for username (email)",
+    )
     access_token_env: str = Field(
-        default="CONFLUENCE_ACCESS_TOKEN",
-        description="Environment variable name for access token",
+        default="CONFLUENCE_API_TOKEN",
+        description="Environment variable name for API token",
     )
 
 

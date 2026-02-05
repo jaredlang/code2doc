@@ -584,7 +584,7 @@ confluence:
 # AWS Bedrock configuration
 bedrock:
   region: "us-east-1"
-  model_id: "anthropic.claude-opus-4-5-20251101-v1:0"
+  model_id: "us.anthropic.claude-opus-4-5-20251101-v1:0"
 
 # Agent configuration
 agents:
@@ -751,7 +751,7 @@ AWS_PROFILE=your-profile-name
 # Leave AWS_PROFILE empty or unset when using IAM roles
 
 # Bedrock Model Configuration
-BEDROCK_MODEL_ID=anthropic.claude-opus-4-5-20251101-v1:0
+BEDROCK_MODEL_ID=us.anthropic.claude-opus-4-5-20251101-v1:0
 
 # ===========================================
 # GitLab Configuration

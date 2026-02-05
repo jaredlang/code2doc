@@ -1,0 +1,55 @@
+# Code-2-Doc Configuration File
+# Copy this file to code2doc.yaml and customize for your project
+
+version: "1.0"
+
+# GitLab Repository Configuration
+gitlab:
+  url: "https://gitlab.example.com/group/project"
+  branch: "main"
+  access_token_env: "GITLAB_ACCESS_TOKEN"
+
+# Confluence Documentation Configuration
+confluence:
+  base_url: "https://example.atlassian.net/wiki"
+  space_key: "DOCS"
+  parent_page_id: ""  # Optional: parent page for documentation hierarchy
+  access_token_env: "CONFLUENCE_ACCESS_TOKEN"
+
+# Document Naming Configuration
+naming:
+  project_name: ""  # Leave empty to auto-detect from repository name
+  prefix: ""        # Optional prefix for all document titles
+  suffix: ""        # Optional suffix for all document titles
+
+# Version Management Configuration
+versioning:
+  enabled: true
+  skip_unchanged: true      # Skip update if content hash matches
+  include_commit_ref: true  # Include git commit in version comment
+  include_timestamp: true   # Include generation timestamp
+
+# Agent Configuration
+agents:
+  supervisor_name: "code2doc-supervisor"
+  sub_agents:
+    - name: "erd-agent"
+      enabled: true
+    - name: "event-schema-agent"
+      enabled: true
+    - name: "api-endpoint-agent"
+      enabled: true
+    - name: "local-run-guide-agent"
+      enabled: true
+    - name: "design-agent"
+      enabled: true
+    - name: "overview-agent"
+      enabled: true
+    - name: "resource-dependency-agent"
+      enabled: true
+
+# Output Configuration
+output:
+  format: "markdown"
+  include_diagrams: true
+  diagram_format: "mermaid"

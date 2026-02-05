@@ -80,16 +80,18 @@ def get_page_by_title(
         title: Exact page title to search for
 
     Returns:
-        JSON with page content and metadata, or error if not found
+        JSON with page content and metadata, or not_found status if page doesn't exist
     """
     try:
         client = ConfluenceClient.get_instance()
         page = client.get_page_by_title(title=title, space_key=space_key)
 
         if page is None:
-            return json.dumps({"error": f"Page not found: {title}"})
+            logger.warning(f"Page not found: {title} - it will be created if using find_or_create_page")
+            return json.dumps({"status": "not_found", "title": title, "message": f"Page '{title}' does not exist yet"})
 
         result = {
+            "status": "found",
             "page_id": page["id"],
             "title": page["title"],
             "version": page["version"]["number"],

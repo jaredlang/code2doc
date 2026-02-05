@@ -48,13 +48,6 @@ def show_config(
     table.add_row("Region", settings.aws.aws_region)
     table.add_row("Profile", settings.aws.aws_profile or "[dim]Not set (using IAM)[/dim]")
     table.add_row("Model ID", settings.aws.bedrock_model_id)
-    table.add_row(
-        "Supervisor Agent ID", settings.aws.bedrock_supervisor_agent_id or "[dim]Not set[/dim]"
-    )
-    table.add_row(
-        "Supervisor Alias ID",
-        settings.aws.bedrock_supervisor_agent_alias_id or "[dim]Not set[/dim]",
-    )
     console.print(table)
 
     # GitLab Configuration
@@ -119,9 +112,6 @@ def validate_config() -> None:
         issues.append("Confluence space key not configured (CONFLUENCE_SPACE_KEY)")
 
     # Check optional but recommended settings
-    if not settings.aws.bedrock_supervisor_agent_id:
-        warnings.append("Bedrock supervisor agent not configured - run setup_agents.py")
-
     if not settings.aws.aws_profile:
         warnings.append("AWS profile not set - will use IAM role or default credentials")
 
@@ -237,7 +227,16 @@ def show_env_template() -> None:
 # AWS Configuration
 AWS_REGION=us-east-1
 AWS_PROFILE=your-profile-name
-BEDROCK_MODEL_ID=us.anthropic.claude-opus-4-5-20251101-v1:0
+BEDROCK_MODEL_ID=us.anthropic.claude-sonnet-4-20250514-v1:0
+
+# LLM Provider Selection
+# LLM Provider: "bedrock" (default) or "anthropic"
+LLM_PROVIDER=bedrock
+
+# LangSmith Tracing (Optional)
+LANGCHAIN_TRACING_V2=false
+# LANGCHAIN_API_KEY=ls__xxxxxxxxxxxx
+# LANGCHAIN_PROJECT=code2doc
 
 # GitLab Configuration
 GITLAB_URL=https://gitlab.example.com
@@ -249,10 +248,6 @@ CONFLUENCE_URL=https://example.atlassian.net/wiki
 CONFLUENCE_SPACE_KEY=DOCS
 CONFLUENCE_USERNAME=user@example.com
 CONFLUENCE_API_TOKEN=your_api_token
-
-# Bedrock Agent IDs (set after running setup_agents.py)
-BEDROCK_SUPERVISOR_AGENT_ID=
-BEDROCK_SUPERVISOR_AGENT_ALIAS_ID=
 
 # Application Settings
 LOG_LEVEL=INFO

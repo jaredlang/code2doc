@@ -767,10 +767,11 @@ CONFLUENCE_USERNAME=user@example.com
 CONFLUENCE_ACCESS_TOKEN=your_confluence_api_token
 
 # ===========================================
-# Bedrock Agent IDs (populated after agent creation)
+# LangSmith Tracing (Optional)
 # ===========================================
-BEDROCK_SUPERVISOR_AGENT_ID=
-BEDROCK_SUPERVISOR_AGENT_ALIAS_ID=
+LANGCHAIN_TRACING_V2=false
+# LANGCHAIN_API_KEY=ls__xxxxxxxxxxxx
+# LANGCHAIN_PROJECT=code2doc
 ```
 
 ### AWS Authentication Strategy
@@ -787,14 +788,14 @@ The application uses boto3's credential chain, which automatically:
 
 ## AWS Resources Required
 
-With the Return Control pattern, infrastructure requirements are minimal:
+With the LangGraph architecture, infrastructure requirements are minimal:
 
 | Resource | Purpose |
 |----------|---------|
-| Bedrock Agents | Supervisor and 7 sub-agents (created via script or console) |
-| IAM User/Role | For CLI to invoke Bedrock agents |
+| Bedrock Runtime | For invoking foundation models via LangChain |
+| IAM User/Role | For CLI to invoke Bedrock models |
 
-**No Lambda functions, Secrets Manager, or additional AWS infrastructure required.**
+**No Bedrock Agents, Lambda functions, Secrets Manager, or additional AWS infrastructure required.**
 
 Credentials for GitLab and Confluence are stored locally (environment variables or config file).
 
@@ -803,14 +804,14 @@ Credentials for GitLab and Confluence are stored locally (environment variables 
 1. **Credential Management**: Store GitLab and Confluence tokens as environment variables or in local config
 2. **AWS Credentials**: Use AWS CLI profiles or IAM roles for Bedrock access
 3. **Data Privacy**: Source code is processed locally and sent to Bedrock for analysis - consider data sensitivity
-4. **Audit Logging**: Enable CloudTrail for Bedrock agent invocations if needed
+4. **Audit Logging**: Enable CloudTrail for Bedrock model invocations if needed
 5. **Token Security**: Never commit tokens to version control; use `.env` files or environment variables
 
 ## Next Steps
 
 1. Set up Python project with dependencies
-2. Create Bedrock agents using setup script
+2. Configure LangChain with Bedrock or Anthropic provider
 3. Implement local tool executors for GitLab and Confluence
-4. Develop CLI application with Return Control loop
+4. Develop CLI application with LangGraph workflow
 5. Write integration tests
 6. Create user documentation

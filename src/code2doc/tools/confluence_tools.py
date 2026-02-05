@@ -656,10 +656,18 @@ class GetPageByTitleTool(BaseTool):
             )
 
             if page is None:
-                return ToolResult.failure(f"Page not found: {kwargs['title']}")
+                logger.warning(f"Page not found: {kwargs['title']} - it will be created if using find_or_create_page")
+                return ToolResult.success(
+                    {
+                        "status": "not_found",
+                        "title": kwargs["title"],
+                        "message": f"Page '{kwargs['title']}' does not exist yet",
+                    }
+                )
 
             return ToolResult.success(
                 {
+                    "status": "found",
                     "id": page["id"],
                     "title": page["title"],
                     "version": page["version"]["number"],

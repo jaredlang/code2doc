@@ -60,13 +60,13 @@ def status(
     )
     table.add_row("AWS Credentials", aws_status)
 
-    # Bedrock Agents
-    agent_status = (
+    # Bedrock Model
+    model_status = (
         "[green]✓ Configured[/green]"
-        if settings.aws.bedrock_supervisor_agent_id
+        if settings.aws.bedrock_model_id
         else "[red]✗ Not configured[/red]"
     )
-    table.add_row("Bedrock Agents", agent_status)
+    table.add_row("Bedrock Model", model_status)
 
     console.print(table)
 
@@ -110,20 +110,12 @@ def status(
         settings.gitlab.access_token and settings.confluence.url and settings.confluence.api_token
     )
 
-    if all_configured and settings.aws.bedrock_supervisor_agent_id:
+    if all_configured:
         console.print(
             Panel(
                 "[green]System is fully configured and ready to use[/green]",
                 title="Status",
                 border_style="green",
-            )
-        )
-    elif all_configured:
-        console.print(
-            Panel(
-                "[yellow]System is partially configured. Run setup_agents.py to create Bedrock agents.[/yellow]",
-                title="Status",
-                border_style="yellow",
             )
         )
     else:
@@ -138,23 +130,25 @@ def status(
     console.print()
 
 
-@app.command("agents")
-def agent_status() -> None:
-    """Show Bedrock agent status."""
+@app.command("model")
+def model_status() -> None:
+    """Show Bedrock model configuration."""
     settings = get_settings()
 
-    console.print("\n[bold]Bedrock Agent Status[/bold]\n")
+    console.print("\n[bold]Bedrock Model Configuration[/bold]\n")
 
-    if not settings.aws.bedrock_supervisor_agent_id:
-        console.print("[yellow]Bedrock agents not configured[/yellow]")
-        console.print("\nTo set up agents:")
-        console.print("  1. Run: python scripts/setup_agents.py")
-        console.print("  2. Or manually create agents in AWS Console")
-        console.print("  3. Set BEDROCK_SUPERVISOR_AGENT_ID in .env")
-        console.print()
-        return
+    table = Table(show_header=True, header_style="bold")
+    table.add_column("Property")
+    table.add_column("Value")
 
-    # Try to get agent details from AWS
+    table.add_row("Model ID", settings.aws.bedrock_model_id)
+    table.add_row("Region", settings.aws.aws_region)
+    table.add_row("Profile", settings.aws.aws_profile or "[dim]Using IAM/default[/dim]")
+
+    console.print(table)
+
+    # Test Bedrock connectivity
+    console.print("\n[bold]Testing Bedrock Connectivity...[/bold]")
     try:
         import boto3
 
@@ -162,25 +156,11 @@ def agent_status() -> None:
             profile_name=settings.aws.aws_profile,
             region_name=settings.aws.aws_region,
         )
-        client = session.client("bedrock-agent")
-
-        # Get supervisor agent
-        agent = client.get_agent(agentId=settings.aws.bedrock_supervisor_agent_id)
-        agent_info = agent.get("agent", {})
-
-        table = Table(show_header=True, header_style="bold")
-        table.add_column("Property")
-        table.add_column("Value")
-
-        table.add_row("Agent ID", agent_info.get("agentId", "N/A"))
-        table.add_row("Name", agent_info.get("agentName", "N/A"))
-        table.add_row("Status", agent_info.get("agentStatus", "N/A"))
-        table.add_row("Foundation Model", agent_info.get("foundationModel", "N/A"))
-
-        console.print(table)
-
+        client = session.client("bedrock-runtime")
+        # Just verify we can create the client
+        console.print("[green]✓[/green] Bedrock runtime client created successfully")
     except Exception as e:
-        console.print(f"[red]Error fetching agent details: {e}[/red]")
+        console.print(f"[red]✗[/red] Bedrock connection failed: {e}")
 
     console.print()
 

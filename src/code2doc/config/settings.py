@@ -28,12 +28,6 @@ class AWSSettings(BaseSettings):
         default="us.anthropic.claude-opus-4-5-20251101-v1:0",
         alias="BEDROCK_MODEL_ID",
     )
-    bedrock_supervisor_agent_id: str | None = Field(
-        default=None, alias="BEDROCK_SUPERVISOR_AGENT_ID"
-    )
-    bedrock_supervisor_agent_alias_id: str | None = Field(
-        default=None, alias="BEDROCK_SUPERVISOR_AGENT_ALIAS_ID"
-    )
 
 
 class GitLabSettings(BaseSettings):

@@ -64,7 +64,7 @@ def parse_topics(topics_str: str) -> list[str]:
 
 
 def run_generate(
-    topics: str = "overview",
+    topics: str | None = None,
     all_topics: bool = False,
     dry_run: bool = False,
     gitlab_url: str | None = None,
@@ -75,14 +75,28 @@ def run_generate(
     Run documentation generation using LangGraph.
 
     Args:
-        topics: Comma-separated list of topics
+        topics: Comma-separated list of topics (required unless --all is used)
         all_topics: Generate all topics
         dry_run: Preview without publishing
-        gitlab_url: Override GitLab URL
+        gitlab_url: GitLab repository URL (required)
         confluence_space: Override Confluence space
         stream: Stream progress updates
     """
     settings = get_settings()
+
+    # Validate required parameters
+    if not gitlab_url:
+        console.print("[red]Error: GitLab repository URL is required[/red]")
+        console.print("Use --gitlab-url or -g to specify the repository")
+        raise typer.Exit(1)
+
+    if not all_topics and not topics:
+        console.print("[red]Error: Topics are required[/red]")
+        console.print("Use --topics or -t to specify topics, or --all to generate all topics")
+        console.print("\nAvailable topics:")
+        for topic in ALL_TOPICS:
+            console.print(f"  • {topic}")
+        raise typer.Exit(1)
 
     # Validate configuration
     if not settings.gitlab.access_token:
@@ -96,14 +110,14 @@ def run_generate(
         raise typer.Exit(1)
 
     # Determine topics to generate
-    selected_topics = ALL_TOPICS if all_topics else parse_topics(topics)
+    selected_topics = ALL_TOPICS if all_topics else parse_topics(topics or "")
 
     if not selected_topics:
         console.print("[red]Error: No valid topics specified[/red]")
         raise typer.Exit(1)
 
     # Get repository URL
-    repo_url = gitlab_url or settings.gitlab.url
+    repo_url = gitlab_url
     space_key = confluence_space or settings.confluence.space_key
     parent_page_id = settings.confluence.parent_page_id
 
@@ -286,11 +300,17 @@ def _display_results(results: dict[str, Any], requested_topics: list[str]) -> No
 
 @app.command("run")
 def generate_run(
-    topics: str = typer.Option(
-        "overview",
+    gitlab_url: str = typer.Option(
+        ...,
+        "--gitlab-url",
+        "-g",
+        help="GitLab repository URL (required)",
+    ),
+    topics: str | None = typer.Option(
+        None,
         "--topics",
         "-t",
-        help="Comma-separated list of topics to generate",
+        help="Comma-separated list of topics to generate (required unless --all is used)",
     ),
     all_topics: bool = typer.Option(
         False,
@@ -303,12 +323,6 @@ def generate_run(
         "--dry-run",
         "-n",
         help="Preview without publishing to Confluence",
-    ),
-    gitlab_url: str | None = typer.Option(
-        None,
-        "--gitlab-url",
-        "-g",
-        help="GitLab repository URL (overrides config)",
     ),
     confluence_space: str | None = typer.Option(
         None,
@@ -328,11 +342,14 @@ def generate_run(
     Uses LangGraph multi-agent workflow to analyze source code
     and generate documentation in Confluence.
 
+    Requires:
+        --gitlab-url: The GitLab repository URL to analyze
+        --topics or --all: Topics to generate documentation for
+
     Examples:
-        code2doc generate run --topics overview,erd
-        code2doc generate run --all
-        code2doc generate run -t api --dry-run
-        code2doc generate run -g https://gitlab.com/org/repo -t overview
+        code2doc generate run -g https://gitlab.com/org/repo -t overview,erd
+        code2doc generate run -g https://gitlab.com/org/repo --all
+        code2doc generate run -g https://gitlab.com/org/repo -t api --dry-run
     """
     run_generate(
         topics=topics,

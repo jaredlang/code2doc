@@ -58,6 +58,13 @@ class AgentState(TypedDict):
     messages: Annotated[list[BaseMessage], operator.add]
     """Accumulated messages from agent interactions."""
 
+    # Repository page hierarchy
+    repo_page_id: str | None
+    """Confluence page ID for the repository-level parent page (Level 2)."""
+
+    repo_name: str | None
+    """Name of the repository being documented."""
+
     # Results
     generated_docs: dict[str, str]
     """Mapping of topic -> Confluence page ID for generated docs."""
@@ -89,6 +96,26 @@ class AgentNodeState(TypedDict):
     """Current documentation topic."""
 
 
+def extract_repo_name(repo_url: str) -> str:
+    """
+    Extract the repository name from a GitLab URL.
+
+    Args:
+        repo_url: GitLab repository URL (e.g., https://gitlab.com/org/repo-name)
+
+    Returns:
+        Repository name (e.g., 'repo-name')
+    """
+    # Remove trailing slashes and .git suffix
+    url = repo_url.rstrip("/")
+    if url.endswith(".git"):
+        url = url[:-4]
+
+    # Extract the last path component as the repo name
+    repo_name = url.split("/")[-1]
+    return repo_name
+
+
 def create_initial_state(
     repo_url: str,
     topics: list[str],
@@ -103,12 +130,14 @@ def create_initial_state(
         repo_url: GitLab repository URL
         topics: List of topics to generate
         confluence_space: Confluence space key
-        parent_page_id: Optional parent page ID
+        parent_page_id: Optional parent page ID (Level 1 - root parent)
         branch: Git branch to analyze (default: main)
 
     Returns:
         Initial AgentState for the graph
     """
+    repo_name = extract_repo_name(repo_url)
+
     return AgentState(
         request=DocumentationRequest(
             repo_url=repo_url,
@@ -122,6 +151,8 @@ def create_initial_state(
         completed_topics=[],
         failed_topics=[],
         messages=[],
+        repo_page_id=None,  # Will be set by repo_page_node
+        repo_name=repo_name,
         generated_docs={},
         errors=[],
     )

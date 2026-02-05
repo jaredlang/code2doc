@@ -193,6 +193,7 @@ flowchart TB
         CMD[code2doc command]
         
         subgraph LangGraph[LangGraph Workflow]
+            REPO[Repo Page Node]
             SUP[Supervisor Node]
             ERD[ERD Agent Node]
             API[API Agent Node]
@@ -210,23 +211,46 @@ flowchart TB
         CF[Confluence API]
     end
 
-    CMD --> SUP
+    CMD --> REPO
+    REPO --> SUP
     SUP -->|Route| ERD & API & OVR & DES & EVT & LOC & DEP
     ERD & API & OVR & DES & EVT & LOC & DEP --> LLM
     ERD & API & OVR & DES & EVT & LOC & DEP --> GL & CF
 ```
 
+### Confluence Page Hierarchy
+
+Documentation is organized in a hierarchical structure:
+
+```
+Level 1: CONFLUENCE_PARENT_PAGE_ID (root parent from config)
+└── Level 2: Repository Page (e.g., "my-service")
+    ├── Level 3: my-service - Overview
+    ├── Level 3: my-service - ERD
+    ├── Level 3: my-service - API Endpoints
+    ├── Level 3: my-service - Event Schemas
+    ├── Level 3: my-service - Architecture
+    ├── Level 3: my-service - Local Development Guide
+    └── Level 3: my-service - Resource Dependencies
+```
+
+This structure allows:
+- Multiple repositories to be documented under a single parent page
+- Each repository has its own container page
+- All topic documentation is organized under the repository page
+
 ### Workflow
 
 1. CLI invokes the LangGraph workflow with selected topics
-2. Supervisor node routes to the appropriate agent for each topic
-3. Each agent uses tools to:
+2. **Repo Page Node** creates/finds the repository parent page (Level 2)
+3. Supervisor node routes to the appropriate agent for each topic
+4. Each agent uses tools to:
    - Fetch source code from GitLab
    - Analyze code patterns and structure
    - Generate documentation content
-   - Publish to Confluence
-4. Supervisor continues until all topics are processed
-5. Final results are displayed in the CLI
+   - Publish to Confluence under the repository page (Level 3)
+5. Supervisor continues until all topics are processed
+6. Final results are displayed in the CLI
 
 ### Benefits of LangGraph
 

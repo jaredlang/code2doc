@@ -50,7 +50,9 @@ def create_overview_node(llm: BaseChatModel) -> Callable[[AgentState], dict[str,
         repo_url = request["repo_url"]
         branch = request["branch"]
         confluence_space = request["confluence_space"]
-        parent_page_id = request.get("parent_page_id")
+        # Use repo_page_id (Level 2) as parent for topic pages (Level 3)
+        repo_page_id = state.get("repo_page_id")
+        repo_name = state.get("repo_name", "Unknown")
 
         logger.info(f"Overview agent: Processing {repo_url} (branch: {branch})")
 
@@ -67,8 +69,8 @@ Your task:
 3. Identify the project's purpose, features, and technology stack
 4. Generate a comprehensive overview document
 5. Publish the document to Confluence space '{confluence_space}'
-   - Use title format: [Project Name] - Overview
-   - Parent page ID: {parent_page_id or "None (create at root level)"}
+   - Use title format: {repo_name} - Overview
+   - Parent page ID: {repo_page_id} (REQUIRED - this is the repository documentation page)
 
 Focus on providing value to developers who need to understand this project quickly.
 """

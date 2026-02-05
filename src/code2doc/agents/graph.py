@@ -3,6 +3,11 @@ Main LangGraph workflow for documentation generation.
 
 This module assembles the complete documentation generation graph
 by connecting the supervisor and agent nodes.
+
+Page Hierarchy:
+- Level 1: CONFLUENCE_PARENT_PAGE_ID (root parent from config)
+- Level 2: Repo page (created by repo_page_node, named by repo name)
+- Level 3: Topic pages (created by individual agents under repo page)
 """
 
 import os
@@ -19,6 +24,7 @@ from code2doc.agents.nodes.erd import create_erd_node
 from code2doc.agents.nodes.event_schema import create_event_schema_node
 from code2doc.agents.nodes.local_run import create_local_run_node
 from code2doc.agents.nodes.overview import create_overview_node
+from code2doc.agents.nodes.repo_page import create_repo_page_node
 from code2doc.agents.nodes.supervisor import create_supervisor_node, route_to_agent
 from code2doc.agents.state import AgentState, create_initial_state
 from code2doc.config.settings import get_settings
@@ -99,10 +105,16 @@ def create_documentation_graph() -> Any:
     Create the main documentation generation graph.
 
     The graph structure:
-    1. START -> supervisor (routes to appropriate agent)
-    2. supervisor -> agent_node (based on current topic)
-    3. agent_node -> supervisor (for next topic)
-    4. supervisor -> END (when all topics complete)
+    1. START -> repo_page (creates Level 2 repo parent page)
+    2. repo_page -> supervisor (routes to appropriate agent)
+    3. supervisor -> agent_node (based on current topic)
+    4. agent_node -> supervisor (for next topic)
+    5. supervisor -> END (when all topics complete)
+
+    Page Hierarchy:
+    - Level 1: CONFLUENCE_PARENT_PAGE_ID (root parent from config)
+    - Level 2: Repo page (created by repo_page_node)
+    - Level 3: Topic pages (created by agents under repo page)
 
     Returns:
         Compiled StateGraph ready for execution
@@ -113,6 +125,7 @@ def create_documentation_graph() -> Any:
     llm = get_llm()
 
     # Create nodes
+    repo_page = create_repo_page_node()
     supervisor = create_supervisor_node(llm)
     overview_agent = create_overview_node(llm)
     erd_agent = create_erd_node(llm)
@@ -126,6 +139,7 @@ def create_documentation_graph() -> Any:
     builder: StateGraph[AgentState] = StateGraph(AgentState)
 
     # Add nodes - type ignore needed due to LangGraph's complex type system
+    builder.add_node("repo_page", repo_page)  # type: ignore[call-overload]
     builder.add_node("supervisor", supervisor)  # type: ignore[call-overload]
     builder.add_node("overview_agent", overview_agent)  # type: ignore[call-overload]
     builder.add_node("erd_agent", erd_agent)  # type: ignore[call-overload]
@@ -136,8 +150,11 @@ def create_documentation_graph() -> Any:
     builder.add_node("dependencies_agent", dependencies_agent)  # type: ignore[call-overload]
 
     # Add edges
-    # Start with supervisor
-    builder.add_edge(START, "supervisor")
+    # Start with repo_page node to create Level 2 parent page
+    builder.add_edge(START, "repo_page")
+
+    # After repo_page, go to supervisor
+    builder.add_edge("repo_page", "supervisor")
 
     # Conditional routing from supervisor to agents
     builder.add_conditional_edges(

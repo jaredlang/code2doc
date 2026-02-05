@@ -50,7 +50,9 @@ def create_api_node(llm: BaseChatModel) -> Callable[[AgentState], dict[str, Any]
         repo_url = request["repo_url"]
         branch = request["branch"]
         confluence_space = request["confluence_space"]
-        parent_page_id = request.get("parent_page_id")
+        # Use repo_page_id (Level 2) as parent for topic pages (Level 3)
+        repo_page_id = state.get("repo_page_id")
+        repo_name = state.get("repo_name", "Unknown")
 
         logger.info(f"API agent: Processing {repo_url} (branch: {branch})")
 
@@ -83,8 +85,8 @@ Your task:
    - Public vs internal endpoints
 
 4. Publish to Confluence space '{confluence_space}'
-   - Use title format: [Project Name] - API Endpoints
-   - Parent page ID: {parent_page_id or "None (create at root level)"}
+   - Use title format: {repo_name} - API Endpoints
+   - Parent page ID: {repo_page_id} (REQUIRED - this is the repository documentation page)
 
 Include example requests and responses where helpful.
 """

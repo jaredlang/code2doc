@@ -369,13 +369,18 @@ class ConfluenceClient:
             title: Page title
             content: Page content (markdown by default, will be converted to storage format)
             space_key: Space key (uses default if not provided)
-            parent_id: Parent page ID (optional)
+            parent_id: Parent page ID (uses CONFLUENCE_PARENT_PAGE_ID from settings if not provided)
             content_format: Content format - 'markdown' (default), 'storage', or 'wiki'
 
         Returns:
             Created page data
         """
         space = space_key or self.space_key
+
+        # Use default parent_id from settings if not provided
+        if parent_id is None:
+            settings = get_settings()
+            parent_id = settings.confluence.parent_page_id
 
         # Convert content based on format
         if content_format == "markdown":

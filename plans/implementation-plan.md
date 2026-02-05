@@ -26,7 +26,7 @@ This document outlines the step-by-step implementation plan for the Code-2-Doc m
   - `AWS_REGION` - AWS region for Bedrock
   - `AWS_ACCESS_KEY_ID` - AWS access key (or use AWS CLI profile)
   - `AWS_SECRET_ACCESS_KEY` - AWS secret key (or use AWS CLI profile)
-  - `BEDROCK_MODEL_ID` - LLM model ID (e.g., `us.anthropic.claude-opus-4-5-20251101-v1:0`)
+  - `LLM_MODEL_ID` - LLM model ID (e.g., `us.anthropic.claude-opus-4-5-20251101-v1:0`)
   - `GITLAB_URL` - GitLab instance URL
   - `GITLAB_ACCESS_TOKEN` - GitLab personal access token
   - `CONFLUENCE_URL` - Confluence instance URL

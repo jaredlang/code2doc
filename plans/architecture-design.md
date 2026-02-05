@@ -751,7 +751,7 @@ AWS_PROFILE=your-profile-name
 # Leave AWS_PROFILE empty or unset when using IAM roles
 
 # Bedrock Model Configuration
-BEDROCK_MODEL_ID=us.anthropic.claude-opus-4-5-20251101-v1:0
+LLM_MODEL_ID=us.anthropic.claude-opus-4-5-20251101-v1:0
 
 # ===========================================
 # GitLab Configuration

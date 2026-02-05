@@ -27,7 +27,7 @@ class TestSettings:
             settings = Settings()
 
             assert settings.aws.aws_region == "us-east-1"
-            assert settings.aws.bedrock_model_id == "us.anthropic.claude-opus-4-5-20251101-v1:0"
+            assert settings.aws.llm_model_id == "us.anthropic.claude-opus-4-5-20251101-v1:0"
             assert settings.gitlab.url == "https://gitlab.com"
 
     def test_settings_from_env(self, no_dotenv: Path) -> None:  # noqa: ARG002

@@ -24,9 +24,9 @@ class AWSSettings(BaseSettings):
 
     aws_region: str = Field(default="us-east-1", alias="AWS_REGION")
     aws_profile: str | None = Field(default=None, alias="AWS_PROFILE")
-    bedrock_model_id: str = Field(
+    llm_model_id: str = Field(
         default="us.anthropic.claude-opus-4-5-20251101-v1:0",
-        alias="BEDROCK_MODEL_ID",
+        alias="LLM_MODEL_ID",
     )
 
 

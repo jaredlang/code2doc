@@ -161,7 +161,7 @@ def run_generate(
         TextColumn("[progress.description]{task.description}"),
         console=console,
     ) as progress:
-        task = progress.add_task("Initializing...", total=None)
+        task = progress.add_task("...", total=None)
 
         try:
             if stream:

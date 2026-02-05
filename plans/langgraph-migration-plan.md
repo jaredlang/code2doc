@@ -151,7 +151,7 @@ ANTHROPIC_API_KEY=sk-ant-xxxxxxxxxxxx
 # Option B: AWS Bedrock (keeps existing AWS setup)
 AWS_REGION=us-east-1
 AWS_PROFILE=your-profile-name
-BEDROCK_MODEL_ID=us.anthropic.claude-sonnet-4-20250514-v1:0
+LLM_MODEL_ID=us.anthropic.claude-sonnet-4-20250514-v1:0
 
 # GitLab (unchanged)
 GITLAB_URL=https://gitlab.example.com

@@ -63,7 +63,7 @@ def status(
     # Bedrock Model
     model_status = (
         "[green]✓ Configured[/green]"
-        if settings.aws.bedrock_model_id
+        if settings.aws.llm_model_id
         else "[red]✗ Not configured[/red]"
     )
     table.add_row("Bedrock Model", model_status)
@@ -141,7 +141,7 @@ def model_status() -> None:
     table.add_column("Property")
     table.add_column("Value")
 
-    table.add_row("Model ID", settings.aws.bedrock_model_id)
+    table.add_row("Model ID", settings.aws.llm_model_id)
     table.add_row("Region", settings.aws.aws_region)
     table.add_row("Profile", settings.aws.aws_profile or "[dim]Using IAM/default[/dim]")
 

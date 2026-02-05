@@ -51,7 +51,7 @@ LLM_PROVIDER=bedrock  # or "anthropic"
 # AWS Bedrock (if using Bedrock)
 AWS_REGION=us-east-1
 AWS_PROFILE=your-profile-name
-BEDROCK_MODEL_ID=us.anthropic.claude-sonnet-4-20250514-v1:0
+LLM_MODEL_ID=us.anthropic.claude-sonnet-4-20250514-v1:0
 
 # Anthropic (if using direct API)
 # ANTHROPIC_API_KEY=sk-ant-xxxxxxxxxxxx

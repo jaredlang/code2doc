@@ -47,7 +47,7 @@ def show_config(
 
     table.add_row("Region", settings.aws.aws_region)
     table.add_row("Profile", settings.aws.aws_profile or "[dim]Not set (using IAM)[/dim]")
-    table.add_row("Model ID", settings.aws.bedrock_model_id)
+    table.add_row("Model ID", settings.aws.llm_model_id)
     console.print(table)
 
     # GitLab Configuration
@@ -227,7 +227,7 @@ def show_env_template() -> None:
 # AWS Configuration
 AWS_REGION=us-east-1
 AWS_PROFILE=your-profile-name
-BEDROCK_MODEL_ID=us.anthropic.claude-sonnet-4-20250514-v1:0
+LLM_MODEL_ID=us.anthropic.claude-sonnet-4-20250514-v1:0
 
 # LLM Provider Selection
 # LLM Provider: "bedrock" (default) or "anthropic"

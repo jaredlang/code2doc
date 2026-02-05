@@ -36,11 +36,22 @@ def get_llm() -> BaseChatModel:
 
     Supports both AWS Bedrock and direct Anthropic API based on configuration.
 
+    Environment variables:
+        LLM_PROVIDER: 'bedrock' (default) or 'anthropic'
+        LLM_TEMPERATURE: Temperature for generation (default: 0.1)
+        LLM_MAX_TOKENS: Maximum tokens for generation (default: 8192)
+
     Returns:
         Configured LLM instance
     """
     settings = get_settings()
     llm_provider = os.getenv("LLM_PROVIDER", "bedrock").lower()
+
+    # Get LLM parameters from environment with defaults
+    temperature = float(os.getenv("LLM_TEMPERATURE", "0.1"))
+    max_tokens = int(os.getenv("LLM_MAX_TOKENS", "8192"))
+
+    logger.info(f"LLM settings: temperature={temperature}, max_tokens={max_tokens}")
 
     if llm_provider == "anthropic":
         # Direct Anthropic API
@@ -57,6 +68,8 @@ def get_llm() -> BaseChatModel:
                 ChatAnthropic(
                     model="claude-sonnet-4-20250514",
                     api_key=api_key,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
                 ),
             )
         except ImportError as e:
@@ -68,10 +81,12 @@ def get_llm() -> BaseChatModel:
         try:
             from langchain_aws import ChatBedrock
 
-            logger.info(f"Using AWS Bedrock for LLM (model: {settings.aws.bedrock_model_id})")
+            logger.info(f"Using AWS Bedrock for LLM (model: {settings.aws.llm_model_id})")
             return ChatBedrock(
-                model=settings.aws.bedrock_model_id,
+                model=settings.aws.llm_model_id,
                 region=settings.aws.aws_region,
+                temperature=temperature,
+                max_tokens=max_tokens,
             )
         except ImportError as e:
             raise ImportError(

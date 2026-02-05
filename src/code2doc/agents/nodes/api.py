@@ -111,7 +111,7 @@ Include example requests and responses where helpful.
         except Exception as e:
             logger.error(f"API agent failed: {e}")
             return {
-                "completed_topics": state.get("completed_topics", []) + ["api-endpoint"],
+                "failed_topics": state.get("failed_topics", []) + ["api-endpoint"],
                 "errors": state.get("errors", []) + [f"API documentation failed: {str(e)}"],
             }
 

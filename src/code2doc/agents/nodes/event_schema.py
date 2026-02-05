@@ -114,7 +114,7 @@ Include JSON schema examples for each event type.
         except Exception as e:
             logger.error(f"Event schema agent failed: {e}")
             return {
-                "completed_topics": state.get("completed_topics", []) + ["event-schema"],
+                "failed_topics": state.get("failed_topics", []) + ["event-schema"],
                 "errors": state.get("errors", [])
                 + [f"Event schema documentation failed: {str(e)}"],
             }

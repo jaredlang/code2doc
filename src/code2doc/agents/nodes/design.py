@@ -112,7 +112,7 @@ Use Mermaid diagrams for visual representations.
         except Exception as e:
             logger.error(f"Design agent failed: {e}")
             return {
-                "completed_topics": state.get("completed_topics", []) + ["design"],
+                "failed_topics": state.get("failed_topics", []) + ["design"],
                 "errors": state.get("errors", []) + [f"Design documentation failed: {str(e)}"],
             }
 

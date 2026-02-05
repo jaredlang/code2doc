@@ -167,6 +167,7 @@ def run_generate(
             if stream:
                 # Stream mode - show progress for each topic
                 completed: set[str] = set()
+                failed: set[str] = set()
                 for event in run_documentation_generation(
                     repo_url=repo_url,
                     topics=selected_topics,
@@ -188,6 +189,16 @@ def run_generate(
                                     )
                                 completed = completed | new_completed  # Accumulate, don't replace
 
+                                # Track failed topics
+                                new_failed = set(node_state.get("failed_topics", []))
+                                newly_failed = new_failed - failed
+                                for topic in newly_failed:
+                                    progress.update(
+                                        task,
+                                        description=f"[red]✗[/red] Failed: {topic}",
+                                    )
+                                failed = failed | new_failed  # Accumulate, don't replace
+
                                 # Store final results (merge, don't replace)
                                 if "generated_docs" in node_state:
                                     existing_docs = results.get("generated_docs", {})
@@ -203,6 +214,7 @@ def run_generate(
                                     ]
 
                 results["completed_topics"] = list(completed)
+                results["failed_topics"] = list(failed)
 
             else:
                 # Batch mode - wait for completion
@@ -280,6 +292,7 @@ def _display_results(results: dict[str, Any], requested_topics: list[str]) -> No
     console.print("\n[bold]Results:[/bold]\n")
 
     completed = results.get("completed_topics", [])
+    failed = results.get("failed_topics", [])
     generated_docs = results.get("generated_docs", {})
     errors = results.get("errors", [])
 
@@ -292,8 +305,11 @@ def _display_results(results: dict[str, Any], requested_topics: list[str]) -> No
         if topic in completed:
             page_id = generated_docs.get(topic, "N/A")
             table.add_row(topic, "[green]✓[/green]", str(page_id))
-        else:
+        elif topic in failed:
             table.add_row(topic, "[red]✗[/red]", "Failed")
+        else:
+            # Topic was neither completed nor failed (possibly still pending or skipped)
+            table.add_row(topic, "[yellow]?[/yellow]", "Unknown")
 
     console.print(table)
 
@@ -305,10 +321,13 @@ def _display_results(results: dict[str, Any], requested_topics: list[str]) -> No
 
     # Summary
     success_count = len(completed)
+    failed_count = len(failed)
     total_count = len(requested_topics)
     console.print(
         f"\n[bold]Summary:[/bold] {success_count}/{total_count} topics generated successfully"
     )
+    if failed_count > 0:
+        console.print(f"[red]{failed_count} topic(s) failed[/red]")
 
 
 @app.command("run")

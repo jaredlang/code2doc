@@ -108,7 +108,7 @@ Use Mermaid syntax for the ERD diagram that Confluence can render.
         except Exception as e:
             logger.error(f"ERD agent failed: {e}")
             return {
-                "completed_topics": state.get("completed_topics", []) + ["erd"],
+                "failed_topics": state.get("failed_topics", []) + ["erd"],
                 "errors": state.get("errors", []) + [f"ERD generation failed: {str(e)}"],
             }
 

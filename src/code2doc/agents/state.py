@@ -51,6 +51,9 @@ class AgentState(TypedDict):
     completed_topics: list[str]
     """Topics that have been successfully processed."""
 
+    failed_topics: list[str]
+    """Topics that failed during processing."""
+
     # Message history for current agent
     messages: Annotated[list[BaseMessage], operator.add]
     """Accumulated messages from agent interactions."""
@@ -117,6 +120,7 @@ def create_initial_state(
         current_topic=None,
         pending_topics=list(topics),  # Copy to avoid mutation
         completed_topics=[],
+        failed_topics=[],
         messages=[],
         generated_docs={},
         errors=[],

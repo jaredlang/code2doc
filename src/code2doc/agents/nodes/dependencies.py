@@ -115,7 +115,7 @@ Include environment-specific variations (dev, staging, prod) if applicable.
         except Exception as e:
             logger.error(f"Dependencies agent failed: {e}")
             return {
-                "completed_topics": state.get("completed_topics", []) + ["resource-dependency"],
+                "failed_topics": state.get("failed_topics", []) + ["resource-dependency"],
                 "errors": state.get("errors", [])
                 + [f"Dependencies documentation failed: {str(e)}"],
             }

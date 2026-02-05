@@ -95,7 +95,7 @@ Focus on providing value to developers who need to understand this project quick
         except Exception as e:
             logger.error(f"Overview agent failed: {e}")
             return {
-                "completed_topics": state.get("completed_topics", []) + ["overview"],
+                "failed_topics": state.get("failed_topics", []) + ["overview"],
                 "errors": state.get("errors", []) + [f"Overview generation failed: {str(e)}"],
             }
 

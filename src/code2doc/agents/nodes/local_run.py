@@ -117,7 +117,7 @@ Make the guide actionable with copy-paste commands.
         except Exception as e:
             logger.error(f"Local run agent failed: {e}")
             return {
-                "completed_topics": state.get("completed_topics", []) + ["local-run-guide"],
+                "failed_topics": state.get("failed_topics", []) + ["local-run-guide"],
                 "errors": state.get("errors", []) + [f"Local run guide failed: {str(e)}"],
             }
 

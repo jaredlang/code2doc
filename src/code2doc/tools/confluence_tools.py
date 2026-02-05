@@ -401,6 +401,7 @@ class ConfluenceClient:
             body=storage_content,
             parent_id=parent_id,
             representation=representation,
+            editor="v2",  # Use new Confluence editor (Fabric editor)
         )
 
         logger.info(f"Created page: {title} (ID: {result['id']})")

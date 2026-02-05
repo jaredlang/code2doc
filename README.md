@@ -83,20 +83,35 @@ cp code2doc.yaml.example code2doc.yaml
 
 ```bash
 # Generate all documentation types
-code2doc generate run --all
+code2doc generate run -g https://gitlab.com/org/repo --all
 
 # Generate specific topics
-code2doc generate run --topics overview,erd,api
+code2doc generate run -g https://gitlab.com/org/repo --topics overview,erd,api
 
 # Generate with custom GitLab URL
 code2doc generate run -g https://gitlab.com/org/repo -t overview
 
+# Specify a different branch (default is 'main')
+code2doc generate run -g https://gitlab.com/org/repo -t overview -b master
+
 # Dry run (preview without publishing)
-code2doc generate run --topics overview --dry-run
+code2doc generate run -g https://gitlab.com/org/repo --topics overview --dry-run
 
 # Disable streaming progress
-code2doc generate run --all --no-stream
+code2doc generate run -g https://gitlab.com/org/repo --all --no-stream
 ```
+
+### Command Options
+
+| Option | Short | Description | Default |
+|--------|-------|-------------|---------|
+| `--gitlab-url` | `-g` | GitLab repository URL (required) | - |
+| `--topics` | `-t` | Comma-separated list of topics | - |
+| `--all` | `-a` | Generate all documentation topics | `false` |
+| `--branch` | `-b` | Git branch to analyze | `main` |
+| `--confluence-space` | `-s` | Confluence space key (overrides config) | - |
+| `--dry-run` | `-n` | Preview without publishing | `false` |
+| `--no-stream` | - | Disable streaming progress | `false` |
 
 ### Available Topics
 
